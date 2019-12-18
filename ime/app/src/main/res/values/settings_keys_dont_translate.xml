@@ -372,4 +372,6 @@
 
     <string name="settings_key_allow_layouts_to_provide_generic_rows">settings_key_allow_layouts_to_provide_generic_rows</string>
     <string name="settings_key_apply_remote_app_colors">settings_key_apply_remote_app_colors</string>
+    <string name="settings_key_popup_characters_order">settings_key_popup_characters_order</string>
+    <string name="settings_key_popup_characters_order_default">NLOS</string>
 </resources>
