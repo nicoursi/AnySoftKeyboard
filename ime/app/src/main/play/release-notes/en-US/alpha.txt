@@ -1,6 +1,4 @@
 * Keep safe! #covid19
-* A few bug fixes.
-* Updated translations.
-* YABTU
+* Custom extra characters upon pressing and holding a key.
 
-More here: https://github.com/AnySoftKeyboard/AnySoftKeyboard/milestone/92
+More here: https://github.com/AnySoftKeyboard/AnySoftKeyboard/milestone/93
