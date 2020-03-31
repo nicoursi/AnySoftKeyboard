@@ -31,19 +31,29 @@
             android:title="@string/switch_keyboard_on_space"/>
 
         <android.support.v7.preference.CheckBoxPreference
+            android:defaultValue="@bool/settings_default_bool_auto_space_for_punctuation"
+            android:key="@string/settings_key_bool_auto_space_for_punctuation"
+            android:summaryOn="@string/auto_space_for_punctuation_on_summary"
+            android:disableDependentsState="true"
+            android:summaryOff=""
+            android:persistent="true"
+            android:title="@string/auto_space_for_punctuation_title"/>
+
+        <android.support.v7.preference.CheckBoxPreference
             android:defaultValue="@bool/settings_default_bool_should_swap_punctuation_and_space"
             android:key="@string/settings_key_bool_should_swap_punctuation_and_space"
             android:persistent="true"
             android:summaryOff="@string/should_swap_punctuation_and_space_off_summary"
             android:summaryOn="@string/should_swap_punctuation_and_space_on_summary"
-            android:title="@string/should_swap_punctuation_and_space_title"/>
+            android:title="@string/should_swap_punctuation_and_space_title"
+            android:dependency="settings_key_bool_auto_space_for_punctuation"/>
 
         <android.support.v7.preference.CheckBoxPreference
             android:defaultValue="true"
             android:key="double_space_to_period"
+            android:summaryOn="@string/double_space_to_period_summary"
             android:persistent="true"
             android:summaryOff=""
-            android:summaryOn="@string/double_space_to_period_summary"
             android:title="@string/double_space_to_period"/>
 
         <android.support.v7.preference.CheckBoxPreference
@@ -74,3 +84,4 @@
         android:title="@string/tweaks_group"/>
 
 </android.support.v7.preference.PreferenceScreen>
+

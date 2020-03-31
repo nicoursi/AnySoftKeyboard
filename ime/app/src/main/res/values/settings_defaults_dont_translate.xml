@@ -87,6 +87,7 @@
     <bool name="settings_default_allow_suggestions_restart">true</bool>
     <bool name="settings_default_switch_to_alphabet_on_space">true</bool>
     <bool name="settings_default_double_space_to_period">true</bool>
+    <bool name="settings_default_bool_auto_space_for_punctuation">true</bool>
 
     <string name="settings_default_emoji_skin_tone">generic</string>
 

@@ -86,6 +86,7 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
 
     private boolean mAutoCap;
     private boolean mKeyboardAutoCap;
+    private boolean mShouldAutoSpaceForPunctuation;
 
     private int mOrientation = Configuration.ORIENTATION_PORTRAIT;
 
@@ -188,6 +189,16 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
                                 },
                                 GenericOnError.onError(
                                         "settings_key_default_split_state_portrait")));
+        addDisposable(
+                prefs().getBoolean(
+                                R.string.settings_key_bool_auto_space_for_punctuation,
+                                R.bool.settings_default_bool_auto_space_for_punctuation)
+                        .asObservable()
+                        .subscribe(
+                                aBoolean -> mShouldAutoSpaceForPunctuation = aBoolean,
+                                GenericOnError.onError(
+                                        "settings_key_bool_auto_space_for_punctuation")));
+
         addDisposable(
                 prefs().getString(
                                 R.string.settings_key_default_split_state_landscape,
@@ -662,6 +673,55 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
             default:
                 if (isWordSeparator(primaryCode)) {
                     handleSeparator(primaryCode);
+                    // retrieves the first two characters before cursor
+                    String previousTwoChars = ic.getTextBeforeCursor(2, 0).toString();
+                    String stringPrimaryCode = new String(new int[] {primaryCode}, 0, 1);
+                    boolean anyPuntuaction =
+                            (primaryCode == 63 // ?
+                                    || primaryCode == 44 // comma
+                                    || primaryCode == 58 // colon
+                                    || primaryCode == 59 // semi-colon
+                                    || primaryCode == 33 // !
+                                    || primaryCode == 46); // dot
+                    boolean closedParenthesis =
+                            (primaryCode == 41 // )
+                                    || primaryCode == 93 // ]
+                                    || primaryCode == 125); // }
+                    boolean openParenthesis =
+                            (primaryCode == 40 // (
+                                    || primaryCode == 91 // [
+                                    || primaryCode == 123); // {
+
+                    // only if autoCorrect is on and if this feature is checked from settings
+                    if (isAutoCorrect() && mShouldAutoSpaceForPunctuation) {
+                        // always put a space after punctuation marks, and make sure
+                        // the punctuation mark is attached to the previous character
+                        if (anyPuntuaction || closedParenthesis) {
+                            // if the punctuation mark is put after a space, remove that space
+                            // and that punctuation mark as well
+                            if (previousTwoChars.toString().substring(0, 1).equalsIgnoreCase(" ")) {
+                                ic.deleteSurroundingText(2, 0);
+                                // and then add back the mark and put a space after it
+                                ic.commitText(stringPrimaryCode + " ", 1);
+                                // no need to remove anything, just add a space
+                            } else if (!previousTwoChars
+                                    .substring(0, 1)
+                                    .equalsIgnoreCase(stringPrimaryCode)) {
+                                ic.commitText(" ", 0);
+                            }
+                        }
+                        // always put a space before any open parenthesis
+                        // but do some cleaning first where needed
+                        if (openParenthesis) {
+                            if (previousTwoChars.substring(0, 1).equalsIgnoreCase(" ")) {
+                                ic.deleteSurroundingText(2, 0);
+                            } else {
+                                ic.deleteSurroundingText(1, 0);
+                            }
+
+                            ic.commitText(" " + stringPrimaryCode, 1);
+                        }
+                    }
                 } else {
                     if (mControlKeyState.isActive() && primaryCode >= 32 && primaryCode < 127) {
                         // http://en.wikipedia.org/wiki/Control_character#How_control_characters_map_to_keyboards
@@ -700,7 +760,6 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
     private boolean isTerminalEmulation() {
         EditorInfo ei = getCurrentInputEditorInfo();
         if (ei == null) return false;
-
         switch (ei.packageName) {
             case "org.connectbot":
             case "org.woltage.irssiconnectbot":
