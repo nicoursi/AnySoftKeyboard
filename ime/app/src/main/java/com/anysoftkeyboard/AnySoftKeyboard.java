@@ -64,6 +64,8 @@ import com.menny.android.anysoftkeyboard.R;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
+
 import net.evendanan.pixel.GeneralDialogController;
 
 /** Input method implementation for QWERTY-ish keyboard. */
@@ -673,16 +675,23 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
             default:
                 if (isWordSeparator(primaryCode)) {
                     handleSeparator(primaryCode);
+                    final Locale locale = getCurrentAlphabetKeyboard().getLocale();                    
+                    boolean isFrenchKeyboard =
+                             locale != null
+                                    && locale.toString().toLowerCase(Locale.US).startsWith("fr");
                     // retrieves the first two characters before cursor
                     String previousTwoChars = ic.getTextBeforeCursor(2, 0).toString();
                     String stringPrimaryCode = new String(new int[] {primaryCode}, 0, 1);
-                    boolean anyPuntuaction =
+                    // this punctuation marks require different spacing according to the keyboard locale
+                    boolean localeSpecificPunctuation =
                             (primaryCode == 63 // ?
-                                    || primaryCode == 44 // comma
                                     || primaryCode == 58 // colon
                                     || primaryCode == 59 // semi-colon
-                                    || primaryCode == 33 // !
-                                    || primaryCode == 46); // dot
+                                    || primaryCode == 33); // !
+                    // this punctuation marks behave the same way regardless of the keyboard locale
+                    boolean anyLocalePuntuaction =
+                    		(primaryCode == 44 // comma
+                    				|| primaryCode == 46); // dot
                     boolean closedParenthesis =
                             (primaryCode == 41 // )
                                     || primaryCode == 93 // ]
@@ -692,11 +701,13 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
                                     || primaryCode == 91 // [
                                     || primaryCode == 123); // {
 
+
                     // only if autoCorrect is on and if this feature is checked from settings
                     if (isAutoCorrect() && mShouldAutoSpaceForPunctuation) {
                         // always put a space after punctuation marks, and make sure
                         // the punctuation mark is attached to the previous character
-                        if (anyPuntuaction || closedParenthesis) {
+                        if ((anyLocalePuntuaction || closedParenthesis)
+                        		|| (!isFrenchKeyboard && localeSpecificPunctuation)) {
                             // if the punctuation mark is put after a space, remove that space
                             // and that punctuation mark as well
                             if (previousTwoChars.toString().substring(0, 1).equalsIgnoreCase(" ")) {
@@ -712,14 +723,22 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
                         }
                         // always put a space before any open parenthesis
                         // but do some cleaning first where needed
-                        if (openParenthesis) {
+                        if (openParenthesis || (isFrenchKeyboard && localeSpecificPunctuation)) {
                             if (previousTwoChars.substring(0, 1).equalsIgnoreCase(" ")) {
                                 ic.deleteSurroundingText(2, 0);
                             } else {
                                 ic.deleteSurroundingText(1, 0);
                             }
-
-                            ic.commitText(" " + stringPrimaryCode, 1);
+                            if (localeSpecificPunctuation) {
+                            	//add a space after and before the punctuation
+                            	//because this is French locale
+                            	ic.commitText(" " + stringPrimaryCode + " ", 1);
+                            }
+                            //open parenthesis, no need to add space after punctuation mark
+                            else {
+                            	ic.commitText(" " + stringPrimaryCode, 1);
+                            }
+                            	
                         }
                     }
                 } else {
