@@ -146,7 +146,131 @@ public class AnySoftKeyboardGimmicksTest extends AnySoftKeyboardBaseTest {
         mAnySoftKeyboardUnderTest.simulateKeyPress('h');
         Assert.assertEquals("hell, h", inputConnection.getCurrentTextInInputConnection());
     }
+    @Test
+    public void testDoesSwapAutoSpaceForPunctuationOnAutoCorrected() {
+    	SharedPrefsHelper.setPrefsValue(R.string.settings_key_bool_auto_space_for_punctuation, true);                       
+                        
+        TestInputConnection inputConnection = getCurrentTestInputConnection();
 
+        mAnySoftKeyboardUnderTest.simulateTextTyping("hel");
+        verifySuggestions(true, "hel", "hell", "hello");
+
+        mAnySoftKeyboardUnderTest.simulateKeyPress(KeyCodes.SPACE);
+        Assert.assertEquals("hell ", inputConnection.getCurrentTextInInputConnection());
+        // typing punctuation
+        mAnySoftKeyboardUnderTest.simulateKeyPress(',');
+        Assert.assertEquals("hell, ", inputConnection.getCurrentTextInInputConnection());
+
+        mAnySoftKeyboardUnderTest.simulateKeyPress('h');
+        Assert.assertEquals("hell, h", inputConnection.getCurrentTextInInputConnection());
+    }
+    @Test
+    public void testAddsSpaceAfterPunctuationWithoutPicking() {
+    	SharedPrefsHelper.setPrefsValue(R.string.settings_key_bool_auto_space_for_punctuation, true);                       
+                        
+        TestInputConnection inputConnection = getCurrentTestInputConnection();
+
+        mAnySoftKeyboardUnderTest.simulateTextTyping("hel");
+        verifySuggestions(true, "hel", "hell", "hello");
+
+//        mAnySoftKeyboardUnderTest.simulateKeyPress(KeyCodes.SPACE);
+//        Assert.assertEquals("hell ", inputConnection.getCurrentTextInInputConnection());
+        // typing punctuation
+        mAnySoftKeyboardUnderTest.simulateKeyPress(',');
+        Assert.assertEquals("hell, ", inputConnection.getCurrentTextInInputConnection());
+
+        mAnySoftKeyboardUnderTest.simulateKeyPress('h');
+        Assert.assertEquals("hell, h", inputConnection.getCurrentTextInInputConnection());
+    }
+    //adesso
+    public void testDoesNotAddSpaceAfterNonPunctuationWithoutPicking() {
+    	SharedPrefsHelper.setPrefsValue(R.string.settings_key_bool_auto_space_for_punctuation, true);                       
+        
+        TestInputConnection inputConnection = getCurrentTestInputConnection();
+
+        mAnySoftKeyboardUnderTest.simulateTextTyping("hel");
+        verifySuggestions(true, "hel", "hell", "hello");
+
+        mAnySoftKeyboardUnderTest.simulateKeyPress(KeyCodes.SPACE);
+        Assert.assertEquals("hell ", inputConnection.getCurrentTextInInputConnection());
+        // typing punctuation
+        mAnySoftKeyboardUnderTest.simulateKeyPress('2');
+        Assert.assertEquals("hell 2", inputConnection.getCurrentTextInInputConnection());
+
+        mAnySoftKeyboardUnderTest.simulateKeyPress(KeyCodes.SPACE);
+
+        mAnySoftKeyboardUnderTest.simulateTextTyping("hel");
+        verifySuggestions(true, "hel", "hell", "hello");
+
+        mAnySoftKeyboardUnderTest.simulateKeyPress(KeyCodes.SPACE);
+        Assert.assertEquals("hell 2 hell ", inputConnection.getCurrentTextInInputConnection());
+        // typing punctuation
+        mAnySoftKeyboardUnderTest.simulateKeyPress('^');
+        Assert.assertEquals("hell 2 hell ^", inputConnection.getCurrentTextInInputConnection());
+    }
+    @Test
+    public void testAddsSpaceBeforeOpenBracketWithoutPicking() {
+    	SharedPrefsHelper.setPrefsValue(R.string.settings_key_bool_auto_space_for_punctuation, true);                       
+                        
+        TestInputConnection inputConnection = getCurrentTestInputConnection();
+
+        mAnySoftKeyboardUnderTest.simulateTextTyping("hel");
+        verifySuggestions(true, "hel", "hell", "hello");
+
+//        mAnySoftKeyboardUnderTest.simulateKeyPress(KeyCodes.SPACE);
+//        Assert.assertEquals("hell ", inputConnection.getCurrentTextInInputConnection());
+        // typing punctuation
+        mAnySoftKeyboardUnderTest.simulateKeyPress('(');
+        Assert.assertEquals("hell (", inputConnection.getCurrentTextInInputConnection());
+
+        mAnySoftKeyboardUnderTest.simulateKeyPress('h');
+        Assert.assertEquals("hell (h", inputConnection.getCurrentTextInInputConnection());
+    }
+
+    @Test
+    public void testAddsSpaceBeforeOpenBracketOnAutoCorrected() {
+    	SharedPrefsHelper.setPrefsValue(R.string.settings_key_bool_auto_space_for_punctuation, true);                       
+                        
+        TestInputConnection inputConnection = getCurrentTestInputConnection();
+
+        mAnySoftKeyboardUnderTest.simulateTextTyping("hel");
+        verifySuggestions(true, "hel", "hell", "hello");
+
+        mAnySoftKeyboardUnderTest.simulateKeyPress(KeyCodes.SPACE);
+        Assert.assertEquals("hell ", inputConnection.getCurrentTextInInputConnection());
+        
+        // typing open bracket
+        mAnySoftKeyboardUnderTest.simulateKeyPress('(');
+        Assert.assertEquals("hell (", inputConnection.getCurrentTextInInputConnection());
+
+        mAnySoftKeyboardUnderTest.simulateKeyPress('h');
+        Assert.assertEquals("hell (h", inputConnection.getCurrentTextInInputConnection());
+    }
+    public void testDoNotAddSpaceBeforeNonOpenBracketOnAutoCorrected() {
+    	SharedPrefsHelper.setPrefsValue(R.string.settings_key_bool_auto_space_for_punctuation, true);                       
+                        
+        TestInputConnection inputConnection = getCurrentTestInputConnection();
+
+        mAnySoftKeyboardUnderTest.simulateTextTyping("hel");
+        verifySuggestions(true, "hel", "hell", "hello");
+
+        mAnySoftKeyboardUnderTest.simulateKeyPress(KeyCodes.SPACE);
+        Assert.assertEquals("hell ", inputConnection.getCurrentTextInInputConnection());
+        // typing punctuation
+        mAnySoftKeyboardUnderTest.simulateKeyPress('2');
+        Assert.assertEquals("hell 2", inputConnection.getCurrentTextInInputConnection());
+
+        mAnySoftKeyboardUnderTest.simulateKeyPress(KeyCodes.SPACE);
+
+        mAnySoftKeyboardUnderTest.simulateTextTyping("hel");
+        verifySuggestions(true, "hel", "hell", "hello");
+
+        mAnySoftKeyboardUnderTest.simulateKeyPress(KeyCodes.SPACE);
+        Assert.assertEquals("hell 2 hell ", inputConnection.getCurrentTextInInputConnection());
+        // typing punctuation
+        mAnySoftKeyboardUnderTest.simulateKeyPress('^');
+        Assert.assertEquals("hell 2 hell ^", inputConnection.getCurrentTextInInputConnection());
+    }
     @Test
     public void testDoNotSwapNonPunctuationWithAutoSpaceOnAutoCorrected() {
         TestInputConnection inputConnection = getCurrentTestInputConnection();
