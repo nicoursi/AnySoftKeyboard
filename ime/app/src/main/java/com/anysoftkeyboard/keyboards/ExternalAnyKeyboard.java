@@ -71,6 +71,7 @@ public class ExternalAnyKeyboard extends AnyKeyboard implements HardKeyboardTran
     private static final int EXPECTED_CAPACITY_SYMBOLS = 4;
     private static final int EXPECTED_CAPACITY_LETTERS = 16;
     private static final int EXPECTED_CAPACITY_NUMBERS = 4;
+    private static final char DISABLE_REORDERING = 'X';
     private static final char ADD_LANGUAGE_SPECIFIC_LETTERS = 'L';
     private static final char ADD_LANGUAGE_NUMBERS = 'N';
     private static final char ADD_LANGUAGE_SYMBOLS = 'S';
@@ -530,6 +531,7 @@ public class ExternalAnyKeyboard extends AnyKeyboard implements HardKeyboardTran
         StringBuilder languageSpecificLetters = new StringBuilder(EXPECTED_CAPACITY_LETTERS);
         StringBuilder symbols = new StringBuilder(EXPECTED_CAPACITY_SYMBOLS);
         StringBuilder numbers = new StringBuilder(EXPECTED_CAPACITY_NUMBERS);
+        boolean disableReordering = false;
         if (key.popupCharacters != null && key.popupCharacters.length() != 0) {
             int index = 0;
             while (index < key.popupCharacters.length()) {
@@ -550,6 +552,10 @@ public class ExternalAnyKeyboard extends AnyKeyboard implements HardKeyboardTran
                                 + EXPECTED_CAPACITY_NUMBERS
                                 + EXPECTED_CAPACITY_SYMBOLS);
         for (int index = 0; index < mPopupCharactersOrder.length(); index++) {
+            if (index == 0 && mPopupCharactersOrder.charAt(index) == DISABLE_REORDERING) {
+                disableReordering = true;
+                break;
+            }
             switch (mPopupCharactersOrder.charAt(index)) {
                 case ADD_LANGUAGE_SPECIFIC_LETTERS:
                     requestedSymbols.append(languageSpecificLetters);
@@ -563,6 +569,14 @@ public class ExternalAnyKeyboard extends AnyKeyboard implements HardKeyboardTran
                 case ADD_LANGUAGE_DEFAULT_LETTERS:
                     requestedSymbols.append(defaultLetters);
                     break;
+                case DISABLE_REORDERING:
+                    Logger.d(
+                            TAG,
+                            "This tag should be used at the beginning of the string but it was used at position"
+                                    + " %d in mPopupCharactersOrder (%s); discarding.",
+                            index,
+                            mPopupCharactersOrder);
+                    break;
                 default:
                     Logger.d(
                             TAG,
@@ -572,31 +586,39 @@ public class ExternalAnyKeyboard extends AnyKeyboard implements HardKeyboardTran
                     break;
             }
         }
-        // removing repeated characters (remembering that some Unicode characters can fill up
-        // two Java chars)
-        HashSet<Integer> popupKeyCodes =
-                new HashSet<>(
-                        EXPECTED_CAPACITY_LETTERS
-                                + EXPECTED_CAPACITY_NUMBERS
-                                + EXPECTED_CAPACITY_SYMBOLS);
-        final StringBuilder popupCharactersBuilder =
-                new StringBuilder(
-                        EXPECTED_CAPACITY_LETTERS
-                                + EXPECTED_CAPACITY_NUMBERS
-                                + EXPECTED_CAPACITY_SYMBOLS);
-        int index = 0;
-        while (index < requestedSymbols.length()) {
-            final int codePoint = Character.codePointAt(requestedSymbols, index);
-            if (popupKeyCodes.add(codePoint)) {
-                popupCharactersBuilder.append(Character.toChars(codePoint));
+        if (!disableReordering) {
+            // removing repeated characters (remembering that some Unicode characters can fill up
+            // two Java chars)
+            HashSet<Integer> popupKeyCodes =
+                    new HashSet<>(
+                            EXPECTED_CAPACITY_LETTERS
+                                    + EXPECTED_CAPACITY_NUMBERS
+                                    + EXPECTED_CAPACITY_SYMBOLS);
+            final StringBuilder popupCharactersBuilder =
+                    new StringBuilder(
+                            EXPECTED_CAPACITY_LETTERS
+                                    + EXPECTED_CAPACITY_NUMBERS
+                                    + EXPECTED_CAPACITY_SYMBOLS);
+            int index = 0;
+            while (index < requestedSymbols.length()) {
+                final int codePoint = Character.codePointAt(requestedSymbols, index);
+                if (popupKeyCodes.add(codePoint)) {
+                    popupCharactersBuilder.append(Character.toChars(codePoint));
+                }
+                index += Character.charCount(codePoint);
             }
-            index += Character.charCount(codePoint);
-        }
-        if (popupCharactersBuilder.length() > 0) {
-            key.popupCharacters = popupCharactersBuilder.toString();
-            key.popupResId = com.menny.android.anysoftkeyboard.R.xml.popup_one_row;
+            if (popupCharactersBuilder.length() > 0) {
+                key.popupCharacters = popupCharactersBuilder.toString();
+                key.popupResId = com.menny.android.anysoftkeyboard.R.xml.popup_one_row;
+            } else {
+                super.setupKeyAfterCreation(key);
+            }
         } else {
-            super.setupKeyAfterCreation(key);
+            if (key.popupCharacters != null && key.popupCharacters.length() > 0) {
+                key.popupResId = com.menny.android.anysoftkeyboard.R.xml.popup_one_row;
+            } else {
+                super.setupKeyAfterCreation(key);
+            }
         }
         return true;
     }
