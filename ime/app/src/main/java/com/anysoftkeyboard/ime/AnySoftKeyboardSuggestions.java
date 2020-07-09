@@ -28,6 +28,7 @@ import com.anysoftkeyboard.dictionaries.Dictionary;
 import com.anysoftkeyboard.dictionaries.DictionaryAddOnAndBuilder;
 import com.anysoftkeyboard.dictionaries.DictionaryBackgroundLoader;
 import com.anysoftkeyboard.dictionaries.Suggest;
+
 import com.anysoftkeyboard.dictionaries.WordComposer;
 import com.anysoftkeyboard.keyboards.AnyKeyboard;
 import com.anysoftkeyboard.keyboards.Keyboard;
@@ -207,7 +208,11 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
 
     private boolean mAllowSuggestionsRestart = true;
     private boolean mCurrentlyAllowSuggestionRestart = true;
+
     protected int mWordRevertLength = 0;
+
+    protected boolean mAdditionalCharacterForReverting;
+    private int mHowManyCharactersForReverting = 0;
 
     private boolean mJustAutoAddedWord = false;
     /*
@@ -715,6 +720,8 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
 
     protected void handleSeparator(int primaryCode) {
         performUpdateSuggestions();
+
+        mHowManyCharactersForReverting = 0;
         // Issue 146: Right to left languages require reversed parenthesis
         if (!getCurrentAlphabetKeyboard().isLeftToRightLanguage()) {
             if (primaryCode == (int) ')') {
@@ -760,6 +767,10 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
             // Picked the suggestion by a space/punctuation character: we will treat it
             // as "added an auto space".
             mWordRevertLength = wordToOutput.length() + 1;
+
+            mAdditionalCharacterForReverting = !newLine;
+            if (!newLine) mHowManyCharactersForReverting++;
+
         } else if (separatorInsideWord) {
             // when putting a separator in the middle of a word, there is no
             // need to do correction, or keep knowledge
@@ -767,8 +778,9 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
         }
 
         boolean handledOutputToInputConnection = false;
-
+        boolean sentTypedCharacter = false;
         if (ic != null) {
+            //if the separator is a space, then
             if (isSpace) {
                 if (mIsDoubleSpaceChangesToPeriod
                         && (SystemClock.uptimeMillis() - mLastSpaceTimeStamp) < mMultiTapTimeout) {
@@ -778,11 +790,12 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
                     // into "word "->"word. "
                     ic.deleteSurroundingText(1, 0);
                     ic.commitText(". ", 1);
+/*<<<<<<< HEAD
                     isEndOfSentence = true;
                     handledOutputToInputConnection = true;
                 }
             } else if (mLastSpaceTimeStamp
-                            != NEVER_TIME_STAMP /*meaning the previous key was SPACE*/
+                            != NEVER_TIME_STAMP //meaning the previous key was SPACE
                     && (mSwapPunctuationAndSpace || newLine)
                     && isSpaceSwapCharacter(primaryCode)) {
                 // current text in the input-box should be something like "word "
@@ -792,16 +805,71 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
                 ic.deleteSurroundingText(1, 0);
                 ic.commitText(new String(new int[] {primaryCode}, 0, 1) + (newLine ? "" : " "), 1);
                 handledOutputToInputConnection = true;
+=======*/
+                    mAdditionalCharacterForReverting = true;
+                    mHowManyCharactersForReverting++;
+                    isEndOfSentence = true;
+                    handledOutputToInputConnection = true;
+                }
+            } else if (mAdditionalCharacterForReverting
+                    && isAutoCorrect()
+                    && (mSwapPunctuationAndSpace || newLine)) {
+
+                // current text in the input-box should be something like "word " or "word"
+                // the user pressed a punctuation (say ","). So we want to change the text in the
+                // input-box
+                // into "word " -> "word, "
+                // or   "word"  -> "word, "
+                // is it one of these: ? ! : ;
+                boolean differentSpacingCharacter = requiresDifferentSpacing(primaryCode, 1);
+                if (isSpaceSwapCharacter(primaryCode)) {
+                    // last character was a space
+                    if (isSpace) {
+                        // delete the space to get ready for punctuation
+                        ic.deleteSurroundingText(1, 0);
+                        mHowManyCharactersForReverting--;
+                    }
+                    // we add the punctuation mark and a space
+                    ic.commitText(
+                            new String(new int[] {primaryCode}, 0, 1) + (newLine ? "" : " "), 1);
+                    mHowManyCharactersForReverting++;
+                    sentTypedCharacter = true;
+                    mAdditionalCharacterForReverting = !newLine;
+                    handledOutputToInputConnection = true;
+
+                    // this is for open brackets  and for French punctuation marks
+                    // that require a space before and after in case of
+                    // e.g : ; ! ?
+                } else if (requiresDifferentSpacing(primaryCode, 2)
+                        || (mFrenchSpacePunctuationBehavior && differentSpacingCharacter)) {
+
+                    // If it's not a space add one
+                    if (!isSpace) {
+                        sendKeyChars((char) KeyCodes.SPACE);
+                        mHowManyCharactersForReverting++;
+                    }
+                    sendKeyChars(primaryCode);
+
+                    if (differentSpacingCharacter) {
+                        sendKeyChars((char) KeyCodes.SPACE);
+                        mHowManyCharactersForReverting++;
+                    } else {
+                        //TextEntryState.typedCharacter(primaryCode, true);
+                    }
+                    sentTypedCharacter = true;
+                    mAdditionalCharacterForReverting = !newLine;
+                    handledOutputToInputConnection = true;
+                }
             }
         }
 
         if (!handledOutputToInputConnection) {
-            for (char c : Character.toChars(primaryCode)) {
-                sendKeyChar(c);
-            }
+            sendKeyChars(primaryCode);
         }
 
         markExpectingSelectionUpdate();
+
+        if (!sentTypedCharacter) Logger.d("nicoursi", "TypedChar is true"); //TextEntryState.typedCharacter(primaryCode, true);
 
         if (ic != null) {
             ic.endBatchEdit();
@@ -828,24 +896,52 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
         return typedWord;
     }
 
+    private void sendKeyChars(int charsToSend) {
+        for (char c : Character.toChars(charsToSend)) {
+            sendKeyChar(c);
+        }
+    }
+
     private boolean isSpaceSwapCharacter(int primaryCode) {
         if (isSentenceSeparator(primaryCode)) {
-            if (mFrenchSpacePunctuationBehavior) {
-                switch (primaryCode) {
-                    case '!':
-                    case '?':
-                    case ':':
-                    case ';':
-                        return false;
-                    default:
-                        return true;
-                }
-            } else {
-                return true;
-            }
+            if (mFrenchSpacePunctuationBehavior && requiresDifferentSpacing(primaryCode, 1))
+                return false;
+            return true;
         } else {
             return false;
         }
+    }
+
+    /**
+     * Checks if the provided separator requires different spacing
+     *
+     * @param primaryCode unicode of the separator
+     * @param variant what kind of different spacing it requires: 1 for space after and before the
+     *     separator; 2 for space only before the separator
+     * @return true if requires different spacing, false otherwise
+     */
+    private boolean requiresDifferentSpacing(int primaryCode, int variant) {
+        boolean spaceAfterAndBefore =
+                (primaryCode == 63 // ?
+                        || primaryCode == 58 // colon
+                        || primaryCode == 59 // semi-colon
+                        || primaryCode == 33); // !
+        boolean openParenthesis =
+                (primaryCode == 40 // (
+                        || primaryCode == 91 // [
+                        || primaryCode == 123); // {
+
+        switch (variant) {
+            case 1:
+                if (spaceAfterAndBefore) return true;
+                break;
+            case 2:
+                if (openParenthesis) return true;
+                break;
+            default:
+                return false;
+        }
+        return false;
     }
 
     public void performRestartWordSuggestion(final InputConnection ic) {
@@ -1075,7 +1171,6 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
             Logger.d(TAG, "User moved cursor to no-man land. Bye bye.");
             return false;
         }
-
         return true;
     }
 
@@ -1213,6 +1308,9 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
     public void pickSuggestionManually(
             int index, CharSequence suggestion, boolean withAutoSpaceEnabled) {
 
+        //final String typedWordni = mWord.getTypedWord().toString();
+        mHowManyCharactersForReverting = 0;
+
         final InputConnection ic = getCurrentInputConnection();
         if (ic != null) {
             ic.beginBatchEdit();
@@ -1239,6 +1337,10 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
             // Follow it with a space
             if (withAutoSpaceEnabled && (index == 0 || !typedWord.isAtTagsSearchState())) {
                 sendKeyChar((char) KeyCodes.SPACE);
+
+                mAdditionalCharacterForReverting = true;
+                mHowManyCharactersForReverting++;
+
                 setSpaceTimeStamp(true);
             }
             // Add the word to the auto dictionary if it's not a known word
@@ -1351,7 +1453,8 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
         if (mWordRevertLength == 0) {
             sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL);
         } else {
-            final int length = mWordRevertLength;
+            final int length = mWordRevertLength + mHowManyCharactersForReverting;
+
             mAutoCorrectOn = false;
             // note: typedWord may be empty
             final InputConnection ic = getCurrentInputConnection();
