@@ -666,8 +666,11 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
                 break;
             default:
                 if (isWordSeparator(primaryCode)) {
+                    // A DIGIT is considered as WordSeparator
                     handleSeparator(primaryCode);
                 } else {
+                    disableSamePunctuation();
+                    disableLastDigit();
                     if (mControlKeyState.isActive() && primaryCode >= 32 && primaryCode < 127) {
                         // http://en.wikipedia.org/wiki/Control_character#How_control_characters_map_to_keyboards
                         int controlCode = primaryCode & 31;
