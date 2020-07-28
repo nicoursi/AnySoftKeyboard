@@ -226,7 +226,6 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
 
     private boolean mWasLastCharDigit = false;
     private boolean mWasLastCharDigitSeparator = false;
-    private boolean mFirstQuote = false;
 
     @Override
     public void onCreate() {
@@ -759,6 +758,10 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
         mIsLastPunctuationSame = 0;
     }
 
+    public void updateAdditionalCharForReverting(boolean newValue) {
+        mAdditionalCharacterForReverting = newValue;
+    }
+
     protected void handleSeparator(int primaryCode) {
         performUpdateSuggestions();
         mHowManyCharactersForReverting = 0;
@@ -781,6 +784,8 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
         final boolean isDigitSeparator =
                 primaryCode == ':' || primaryCode == ',' || primaryCode == '.';
         boolean isFrenchPonctuation;
+        boolean isFrenchPuncMarks = false;
+        String charBeforeCursor;
 
         int lastTypedChar = AnySoftKeyboard.getLastCharTyped();
 
@@ -830,6 +835,8 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
 
         boolean handledOutputToInputConnection = false;
 
+        mAdditionalCharacterForReverting = !newLine;
+
         // Detect if french ponctuation is active, because of special rules of grammar
         // in fr
         isFrenchPonctuation =
@@ -861,6 +868,16 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
                 // into "word ," -> "word, "
                 // or   "word,"  -> "word, "
                 if (isSpaceSwapCharacter(primaryCode)) {
+                    charBeforeCursor = ic.getTextBeforeCursor(2, 0).toString();
+
+                    if (!charBeforeCursor.equals("")) {
+                        if (isAlphabet(charBeforeCursor.charAt(0))) disableSamePunctuation();
+                        if (charBeforeCursor.length() == 2
+                                && charBeforeCursor.charAt(1) == KeyCodes.SPACE
+                                && charBeforeCursor.charAt(0) == primaryCode)
+                            mIsLastPunctuationSame = primaryCode;
+                    }
+
                     if (mEnableSamePunctuation && primaryCode != mIsLastPunctuationSame)
                         disableSamePunctuation();
                     // Check if the punctuation is the same and remove pre space if so
@@ -871,16 +888,28 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
                     // last character was a space OR this is the same punctuation twice OR last
                     // punctuation was closing brackets
                     if (mLastSpaceTimeStamp != NEVER_TIME_STAMP
-                            || mEnableSamePunctuation
-                            || requiresDifferentSpacing(lastTypedChar, 4)) {
+                            || (lastTypedChar != KeyCodes.ENTER && mEnableSamePunctuation)
+                            || (!newLine && requiresDifferentSpacing(lastTypedChar, 4))
+                            || (lastTypedChar == '?' && primaryCode == '!')
+                            || (lastTypedChar == '!' && primaryCode == '?')) {
                         // delete the space to get ready for punctuation
                         ic.deleteSurroundingText(1, 0);
                         mHowManyCharactersForReverting--;
                     }
 
+                    if (isFrenchPonctuation
+                            && ((lastTypedChar == '?' && primaryCode == '!')
+                                    || (lastTypedChar == '!' && primaryCode == '?'))) {
+                        isFrenchPuncMarks = true;
+                    }
+
                     if (requiresDifferentSpacing(primaryCode, 1)) {
                         ic.commitText(
-                                ((isFrenchPonctuation && !mEnableSamePunctuation) ? " " : "")
+                                ((isFrenchPonctuation
+                                                        && !mEnableSamePunctuation
+                                                        && !isFrenchPuncMarks)
+                                                ? " "
+                                                : "")
                                         + new String(new int[] {primaryCode}, 0, 1)
                                         + (newLine ? "" : " "),
                                 1);
@@ -901,11 +930,14 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
                 } else if (requiresDifferentSpacing(primaryCode, 2)) {
                     // Open brackets, insert space before but not after
                     // If the last character is not a space, insert one
-                    if (mLastSpaceTimeStamp == NEVER_TIME_STAMP && mIsLastPunctuationSame == 0) {
+                    // No need to insert anything more than a space to make 'test(' -> 'test ('
+                    if (mLastSpaceTimeStamp == NEVER_TIME_STAMP
+                            && mIsLastPunctuationSame == 0
+                            && lastTypedChar != KeyCodes.ENTER
+                            && !ic.getTextBeforeCursor(1, 0).toString().equals("")) {
                         ic.commitText(" ", 1);
                         mHowManyCharactersForReverting++;
                     }
-                    // No need to insert anything more than a space to make 'test(' -> 'test ('
                 }
             } else if (!mAdditionalCharacterForReverting
                     && mLastSpaceTimeStamp
@@ -922,7 +954,7 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
         if (!handledOutputToInputConnection) {
             // Digit go there
             if (mWasLastCharDigitSeparator
-                    && isDigit
+                    && (isDigit || isSpace)
                     && (lastTypedChar == ':' || lastTypedChar == ',' || lastTypedChar == '.')
                     && lastTypedChar != -5) /* -5 is Keycodes.DELETE */ {
                 ic.deleteSurroundingText(1, 0);
@@ -937,14 +969,7 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
                 mHowManyCharactersForReverting++;
             }
 
-            if (primaryCode == '"' && !mFirstQuote) ic.commitText(" ", 1);
-
             sendKeyChars(primaryCode);
-
-            if (primaryCode == '"' && mFirstQuote) ic.commitText(" ", 1);
-
-            if (primaryCode == '"' && mFirstQuote) mFirstQuote = false;
-            else if (primaryCode == '"') mFirstQuote = true;
 
             // 171 = << , 187 = >>
             if (isFrenchPonctuation
