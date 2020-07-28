@@ -589,7 +589,7 @@ public class AnySoftKeyboardGimmicksTest extends AnySoftKeyboardBaseTest {
         mAnySoftKeyboardUnderTest.onAlphabetKeyboardSet(fakeRtlKeyboard);
 
         mAnySoftKeyboardUnderTest.simulateKeyPress('(');
-        Assert.assertEquals(")", inputConnection.getCurrentTextInInputConnection());
+        Assert.assertEquals(") ", inputConnection.getCurrentTextInInputConnection());
         mAnySoftKeyboardUnderTest.simulateKeyPress(')');
         Assert.assertEquals(") (", inputConnection.getCurrentTextInInputConnection());
     }
@@ -738,15 +738,15 @@ public class AnySoftKeyboardGimmicksTest extends AnySoftKeyboardBaseTest {
         mAnySoftKeyboardUnderTest.getCurrentKeyboardForTests().getShiftKey().onPressed();
 
         mAnySoftKeyboardUnderTest.simulateKeyPress('\'');
-        Assert.assertEquals("'''''' \"", inputConnection.getCurrentTextInInputConnection());
+        Assert.assertEquals("''''''\"", inputConnection.getCurrentTextInInputConnection());
         mAnySoftKeyboardUnderTest.simulateKeyPress('\'');
-        Assert.assertEquals("'''''' \"\" ", inputConnection.getCurrentTextInInputConnection());
+        Assert.assertEquals("''''''\"\"", inputConnection.getCurrentTextInInputConnection());
 
         mAnySoftKeyboardUnderTest.onRelease(KeyCodes.SHIFT);
         mAnySoftKeyboardUnderTest.getCurrentKeyboardForTests().getShiftKey().onReleased();
 
         mAnySoftKeyboardUnderTest.simulateKeyPress('\'');
-        Assert.assertEquals("'''''' \"\" '", inputConnection.getCurrentTextInInputConnection());
+        Assert.assertEquals("''''''\"\"'", inputConnection.getCurrentTextInInputConnection());
     }
 
     @Test
@@ -1109,29 +1109,6 @@ public class AnySoftKeyboardGimmicksTest extends AnySoftKeyboardBaseTest {
 
         mAnySoftKeyboardUnderTest.simulateKeyPress(KeyCodes.ENTER);
         Assert.assertEquals("It is only 33!\n", inputConnection.getCurrentTextInInputConnection());
-    }
-
-    @Test
-    public void testQuotesSpace() {
-        TestInputConnection inputConnection = getCurrentTestInputConnection();
-
-        mAnySoftKeyboardUnderTest.simulateTextTyping("Do you have the");
-
-        mAnySoftKeyboardUnderTest.simulateKeyPress('"');
-        Assert.assertEquals(
-                "Do you have the \"", inputConnection.getCurrentTextInInputConnection());
-
-        mAnySoftKeyboardUnderTest.simulateTextTyping("thing");
-        Assert.assertEquals(
-                "Do you have the \"thing", inputConnection.getCurrentTextInInputConnection());
-
-        mAnySoftKeyboardUnderTest.simulateKeyPress('"');
-        Assert.assertEquals(
-                "Do you have the \"thing\" ", inputConnection.getCurrentTextInInputConnection());
-
-        mAnySoftKeyboardUnderTest.simulateKeyPress('?');
-        Assert.assertEquals(
-                "Do you have the \"thing\" ? ", inputConnection.getCurrentTextInInputConnection());
     }
 
     @Test
