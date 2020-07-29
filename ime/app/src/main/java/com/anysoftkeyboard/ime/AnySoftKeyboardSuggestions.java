@@ -933,7 +933,7 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
         if (!handledOutputToInputConnection) {
             // Digit go there
             if (mWasLastCharDigitSeparator
-                    && isDigit
+                    && (isDigit || isSpace) 
                     && (lastTypedChar == ':' || lastTypedChar == ',' || lastTypedChar == '.')
                     && lastTypedChar != -5) /* -5 is Keycodes.DELETE */ {
                 ic.deleteSurroundingText(1, 0);
